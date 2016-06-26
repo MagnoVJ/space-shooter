@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+using NSState;
+
 /* Classe responsável pelo gerenciamento da entrada (Input) de comandos para o Player Ship. */
 
 public class PlayerInput : MonoBehaviour {
@@ -29,7 +31,7 @@ public class PlayerInput : MonoBehaviour {
 		if (Application.platform == RuntimePlatform.WindowsPlayer ||
    		    Application.platform == RuntimePlatform.WindowsEditor) {
 
-			if (Input.GetKey(KeyCode.Space) && Time.time > nextFire) {
+			if (Input.GetKey(KeyCode.F) && Time.time > nextFire && GameController.actualState == State.PLAYING && Time.timeScale == 1) {
 				nextFire = Time.time + fireRate;
 				GameObject shotSpawn = GetChildGameObject(gameObject, "Shot_Spawner");
 				Instantiate(shot, shotSpawn.transform.position, shotSpawn.transform.rotation);
@@ -38,7 +40,7 @@ public class PlayerInput : MonoBehaviour {
 		}
 		else if (Application.platform == RuntimePlatform.Android) {
 
-			if (areaButton.CanFire() && Time.time > nextFire) {
+			if (areaButton.CanFire() && Time.time > nextFire && GameController.actualState == State.PLAYING && Time.timeScale == 1){
 				nextFire = Time.time + fireRate;
 				GameObject shotSpawn = GetChildGameObject(gameObject, "Shot_Spawner");
 				Instantiate(shot, shotSpawn.transform.position, shotSpawn.transform.rotation);

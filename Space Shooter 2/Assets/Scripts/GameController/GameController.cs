@@ -17,21 +17,19 @@ namespace NSState{
 
 public class GameController : MonoBehaviour{
 
-	public State actualState = State.PLAYING;
+	public static State actualState = State.PLAYING;
 	
 	private Rigidbody rigidbody;
 	private Camera camera;
 	private GameObject canvas;
 	private GameObject gameOverBackground;
 	private GameObject proximoNivelBackground;
+	private GameObject pausedBackground;
 	private const float TIMEFORTHETEXTSCOREEXISTENCE = 0.5f;
 	
 	private int life;
 	private int score;
-
-	////////////////Variavel usada somente para verificar o vetor de save////////
-	private bool controlTTT = true;////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////////////
+	private bool pausado;
 
 	//Vetor responsável por cada animação presente na scena
 	private List<TextAnimation> textAnimationVector;
@@ -54,6 +52,7 @@ public class GameController : MonoBehaviour{
 
 		life = maxLife;
 		score = 0;
+		pausado = false;
 		textAnimationVector = new List<TextAnimation>();
 
 		GetChildGameObject(lifeBar, "LifeTube").GetComponent<Slider>().maxValue = maxLife;
@@ -63,9 +62,11 @@ public class GameController : MonoBehaviour{
 
 		gameOverBackground = GameObject.FindGameObjectWithTag("GameOverBackground");
 		proximoNivelBackground = GameObject.FindGameObjectWithTag("ProximoNivelBackground");
+		pausedBackground = GameObject.FindGameObjectWithTag("PausedBackground");
 
 		gameOverBackground.SetActive(false);
 		proximoNivelBackground.SetActive(false);
+		pausedBackground.SetActive(false);
 
 		GetChildGameObject(scoreBar, "ScoreText").GetComponent<Text>().text = score.ToString().PadLeft(6, '0');
 
@@ -82,14 +83,20 @@ public class GameController : MonoBehaviour{
 
 		if (progressionTube.GetComponent<Slider>().value == progressionTube.GetComponent<Slider>().maxValue) {
 
-			actualState = State.PROXIMONIVEL;
-
 			if(GameObject.Find("Player Ship") != null)
 				GameObject.Find("Player Ship").GetComponent<PlayerImmunity>().immune = true;
 
-			proximoNivelBackground.SetActive(true);
+			if (actualState == State.PLAYING) { 
 
-			GetChildGameObject(proximoNivelBackground, "Proximo Pontuacao").GetComponent<Text>().text = "Pontuação: " + score.ToString().PadLeft(6, '0');
+				proximoNivelBackground.SetActive(true);
+
+				ScoreMananger(proximoNivelBackground);
+
+				GetChildGameObject(proximoNivelBackground, "Proximo Pontuacao").GetComponent<Text>().text = "Pontuação: " + score.ToString().PadLeft(6, '0');
+				
+				actualState = State.PROXIMONIVEL;
+
+			}
 
 		}
 
@@ -98,8 +105,14 @@ public class GameController : MonoBehaviour{
 			GameOverMethod();
 
 			//Gerencia a persitencia do score do player
-			ScoreMananger();
+			ScoreMananger(gameOverBackground);
 
+		}
+
+		////Incremento da barra de tempo
+		if (actualState != State.GAMEOVER){
+			if (progressionTube.GetComponent<Slider>().value < progressionTube.GetComponent<Slider>().maxValue && Time.timeScale == 1)
+				progressionTube.GetComponent<Slider>().value += Time.fixedDeltaTime * (Time.deltaTime / Time.fixedDeltaTime);
 		}
 
 	}
@@ -108,12 +121,6 @@ public class GameController : MonoBehaviour{
 
 		for (int i = 0; i < textAnimationVector.Count; i++)
 			textAnimationVector[i].safText.transform.localScale += new Vector3(0.05f, 0.05f, 0.0f);
-
-		//Incremento da barra de tempo
-		if (actualState != State.GAMEOVER) { 
-			if (progressionTube.GetComponent<Slider>().value < progressionTube.GetComponent<Slider>().maxValue)
-				progressionTube.GetComponent<Slider>().value += Time.fixedDeltaTime;
-		}
 
 	}
 
@@ -228,7 +235,9 @@ public class GameController : MonoBehaviour{
 		GetChildGameObject(gameOverBackground, "Game Over Pontuacao").GetComponent<Text>().text = "Pontuação: " + score.ToString().PadLeft(6, '0');
 	}
 
-	private void ScoreMananger() {
+	private void ScoreMananger(GameObject backgroundInterno) {
+
+		//backgroundInterno vai ser gameOverBackground ou proximoNivelBackground
 		
 		//Gerenciamento do salvamento da pontuacao
 		FileDealer fileDealer = new FileDealer();
@@ -241,17 +250,17 @@ public class GameController : MonoBehaviour{
 
 			//Art star e mensagem
 			if (score > 0){
-				GetChildGameObject(gameOverBackground, "StarRecord").GetComponent<Image>().enabled = true;
-				GetChildGameObject(gameOverBackground, "PontuacaoRecord").GetComponent<Text>().enabled = true;
+				GetChildGameObject(backgroundInterno, "StarRecord").GetComponent<Image>().enabled = true;
+				GetChildGameObject(backgroundInterno, "PontuacaoRecord").GetComponent<Text>().enabled = true;
 			}
 			else{
-				GetChildGameObject(gameOverBackground, "StarRecord").GetComponent<Image>().enabled = false;
-				GetChildGameObject(gameOverBackground, "PontuacaoRecord").GetComponent<Text>().enabled = false;
+				GetChildGameObject(backgroundInterno, "StarRecord").GetComponent<Image>().enabled = false;
+				GetChildGameObject(backgroundInterno, "PontuacaoRecord").GetComponent<Text>().enabled = false;
 			}
 
 			//Impressão do vetor para teste
-			for (int i = 0; i < scoreVector.Count; i++)
-				print("[" + i + "] " + scoreVector[i]);
+			//for (int i = 0; i < scoreVector.Count; i++)
+			//	print("[" + i + "] " + scoreVector[i]);
 
 			fileDealer.Save(scoreVector);
 
@@ -261,11 +270,11 @@ public class GameController : MonoBehaviour{
 			List<int> scoreVector = fileDealer.Load();
 
 
-			if (score >= scoreVector[scoreVector.Count - 1]){
+			if (score > scoreVector[scoreVector.Count - 1]){
 
 				//Art star e mensagem
-				GetChildGameObject(gameOverBackground, "StarRecord").GetComponent<Image>().enabled = false;
-				GetChildGameObject(gameOverBackground, "PontuacaoRecord").GetComponent<Text>().enabled = false;
+				GetChildGameObject(backgroundInterno, "StarRecord").GetComponent<Image>().enabled = false;
+				GetChildGameObject(backgroundInterno, "PontuacaoRecord").GetComponent<Text>().enabled = false;
 
 				if (scoreVector.Count == 5)
 					scoreVector.RemoveAt(scoreVector.Count - 1);
@@ -273,21 +282,21 @@ public class GameController : MonoBehaviour{
 				scoreVector.Insert(scoreVector.Count, score);
 
 				if (score > scoreVector[0]){
-					GetChildGameObject(gameOverBackground, "StarRecord").GetComponent<Image>().enabled = true;
-					GetChildGameObject(gameOverBackground, "PontuacaoRecord").GetComponent<Text>().enabled = true;
+					GetChildGameObject(backgroundInterno, "StarRecord").GetComponent<Image>().enabled = true;
+					GetChildGameObject(backgroundInterno, "PontuacaoRecord").GetComponent<Text>().enabled = true;
 				}
 
 				//Vector antes
-				Debug.Log("Antes");
-				for (int i = 0; i < scoreVector.Count; i++)
-					print("[" + i + "] " + scoreVector[i]);
+				//Debug.Log("Antes");
+				//for (int i = 0; i < scoreVector.Count; i++)
+				//	print("[" + i + "] " + scoreVector[i]);
 
 				scoreVector = InsertionSort(scoreVector);
 
 				//Vector depois
-				Debug.Log("Depois");
-				for (int i = 0; i < scoreVector.Count; i++)
-					print("[" + i + "] " + scoreVector[i]);
+				//Debug.Log("Depois");
+				//for (int i = 0; i < scoreVector.Count; i++)
+				//	print("[" + i + "] " + scoreVector[i]);
 
 
 				fileDealer.Save(scoreVector);
@@ -296,11 +305,11 @@ public class GameController : MonoBehaviour{
 			else{
 
 				//Impressão do vetor para teste
-				for (int i = 0; i < scoreVector.Count; i++)
-					print("[" + i + "] " + scoreVector[i]);
+				//for (int i = 0; i < scoreVector.Count; i++)
+				//	print("[" + i + "] " + scoreVector[i]);
 
-				GetChildGameObject(gameOverBackground, "StarRecord").GetComponent<Image>().enabled = false;
-				GetChildGameObject(gameOverBackground, "PontuacaoRecord").GetComponent<Text>().enabled = false;
+				GetChildGameObject(backgroundInterno, "StarRecord").GetComponent<Image>().enabled = false;
+				GetChildGameObject(backgroundInterno, "PontuacaoRecord").GetComponent<Text>().enabled = false;
 			}
 
 		}
@@ -338,6 +347,25 @@ public class GameController : MonoBehaviour{
 
 		SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
 
+	}
+
+	public void PausarButton(){
+
+		if (actualState == State.PLAYING) { 
+
+			pausado = !pausado;
+
+			if (pausado){
+				Time.timeScale = 0;
+				pausedBackground.SetActive(true);
+			}
+			else { 
+				Time.timeScale = 1;
+				pausedBackground.SetActive(false);
+			}
+
+		}
+	
 	}
 
 	public List<int> InsertionSort(List<int> lista){

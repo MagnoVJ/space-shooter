@@ -21,7 +21,7 @@ public class AsteroidSpawner : MonoBehaviour {
 
 	void Update() {
 
-		if ((gameObject.GetComponent<GameController>().actualState == State.GAMEOVER) || (gameObject.GetComponent<GameController>().actualState == State.PROXIMONIVEL))
+		if ((GameController.actualState == State.GAMEOVER) || (GameController.actualState == State.PROXIMONIVEL))
 			StopCoroutine("SpawnWaves");
 
 	}

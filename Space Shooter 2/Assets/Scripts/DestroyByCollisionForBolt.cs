@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using NSState;
 
 //Essa classe é utilizada exclusivamente por BoltEnemy para indentificar a colisão
 //entre BoltEnemy e BoltPlayer, caso aja essa colisão é chamado o UpdateScore para 
@@ -16,7 +17,7 @@ public class DestroyByCollisionForBolt : MonoBehaviour {
 
 	void OnTriggerEnter(Collider other){
 
-		if (other.CompareTag("BoltPlayer")) { 
+		if (other.CompareTag("BoltPlayer") && GameController.actualState == State.PLAYING) { 
 			gameController.UpdateScorePlayer(gameObject);
 			gameController.AnimationScoreText(gameObject);
 		}
